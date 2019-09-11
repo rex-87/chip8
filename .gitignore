@@ -1,0 +1,8 @@
+# Python
+*.pyc
+
+# Environment
+setup/ENV_OK
+
+# Log files
+logs/
