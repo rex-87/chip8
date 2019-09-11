@@ -1,0 +1,30 @@
+name: chip8_env
+channels:
+  - anaconda-fusion
+  - defaults
+dependencies:
+  - blas=1.0=mkl
+  - ca-certificates=2019.5.15=1
+  - certifi=2019.6.16=py37_1
+  - icc_rt=2019.0.0=h0cc432a_1
+  - intel-openmp=2019.4=245
+  - mkl=2019.4=245
+  - mkl-service=2.3.0=py37hb782905_0
+  - mkl_fft=1.0.14=py37h14836fe_0
+  - mkl_random=1.0.2=py37h343c172_0
+  - numpy=1.16.4=py37h19fb1c0_0
+  - numpy-base=1.16.4=py37hc3f5095_0
+  - openssl=1.1.1d=he774522_0
+  - pip=19.2.2=py37_0
+  - python=3.7.4=h5263a28_0
+  - setuptools=41.0.1=py37_0
+  - six=1.12.0=py37_0
+  - sqlite=3.29.0=he774522_0
+  - vc=14.1=h0510ff6_4
+  - vs2015_runtime=14.16.27012=hf0eaf9b_0
+  - wheel=0.33.4=py37_0
+  - wincertstore=0.2=py37_0
+  - pip:
+    - pygame==1.9.6
+prefix: C:\Users\rex87\miniconda3_64\envs\chip8_env
+
