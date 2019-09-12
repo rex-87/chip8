@@ -44,8 +44,8 @@ try:
 
         def __init__(self, RomPath = None):
             
-            self.display_width_pixel = 64
-            self.display_height_pixel = 32        
+            self.display_width_pixel = 72
+            self.display_height_pixel = 40
             
             with open(RomPath, 'rb') as f:
                 RomStr = f.read()
@@ -126,18 +126,18 @@ try:
             
             w = (self.mem[self.PC] << 8) + self.mem[self.PC+1]
             
-            # print("${:04X} {:04X}".format(self.PC, w))
-            # print(
-                # "V "+
-                # " ".join(["{:02X}".format(val) for key, val in self.V.items()])+
-                # "  I {:04X}".format(self.I)+
-                # "  DT {:02X}".format(self.DT)
-            # )
-            # print(        
-                # "S "+
-                # " ".join(["{:04X}".format(add) for add in self.STACK])+
-                # "  SP {:02X}".format(self.SP)
-            # )
+            print("${:04X} {:04X}".format(self.PC, w))
+            print(
+                "V "+
+                " ".join(["{:02X}".format(val) for key, val in self.V.items()])+
+                "  I {:04X}".format(self.I)+
+                "  DT {:02X}".format(self.DT)
+            )
+            print(        
+                "S "+
+                " ".join(["{:04X}".format(add) for add in self.STACK])+
+                "  SP {:02X}".format(self.SP)
+            )
             
             n3 = (w & 0xF000) >> 12
             x = (w & 0x0F00) >> 8
@@ -438,7 +438,7 @@ try:
             self.joinAllThreads()
             
     ThisFolder = os.path.dirname(os.path.realpath(__file__))
-    RomPath = os.path.join(ThisFolder, r"roms\INVADERS")
+    RomPath = os.path.join(ThisFolder, r"roms\WIPEOFF")
 
     chip8 = Chip8(RomPath = RomPath)
 
