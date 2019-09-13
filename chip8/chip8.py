@@ -3,6 +3,9 @@
 	CHIP-8 Emulator
 	
 	This is a project of emulator for the Chip-8 machine.
+    
+    Reference:
+    http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
 """
 
 ## -------- COMMAND LINE ARGUMENTS ---------------------------
@@ -36,6 +39,7 @@ try:
     import time
     import threading
     import queue
+    import random
 
     pygame.mixer.init(buffer = 256)
     beep = pygame.mixer.Sound(file = r'sounds\200.wav')
@@ -293,6 +297,18 @@ try:
                 The value of register I is set to nnn.
                 """
                 self.I = nnn
+            elif ( n3 == 0xC ):
+                """
+                Cxkk - RND Vx, byte
+                Set Vx = random byte AND kk.
+
+                The interpreter generates a random number from 0 to 255,
+                which is then ANDed with the value kk.
+                The results are stored in Vx.
+                See instruction 8xy2 for more information on AND.
+                """
+                rr = random.randint(0, 0xFF)
+                self.V[x] = rr & kk
             elif ( n3 == 0xD ):
                 """
                 Dxyn - DRW Vx, Vy, nibble
@@ -477,42 +493,93 @@ try:
             elif event.type == pygame.KEYDOWN:          
                 # print(event.unicode+" DOWN")
                 keymap[event.scancode] = event.unicode
-                if event.unicode == "&": chip8.KEYS[0x1] = True
-                elif event.unicode == "é": chip8.KEYS[0x2] = True
-                elif event.unicode == '"': chip8.KEYS[0x3] = True
-                elif event.unicode == "'": chip8.KEYS[0xC] = True
-                elif event.unicode == "a": chip8.KEYS[0x4] = True
-                elif event.unicode == "z": chip8.KEYS[0x5] = True
+                
+                #======================
+                # FRENCH
+                #======================
+                
+                # if   event.unicode == "&": chip8.KEYS[0x1] = True
+                # elif event.unicode == "é": chip8.KEYS[0x2] = True
+                # elif event.unicode == '"': chip8.KEYS[0x3] = True
+                # elif event.unicode == "'": chip8.KEYS[0xC] = True
+                # elif event.unicode == "a": chip8.KEYS[0x4] = True
+                # elif event.unicode == "z": chip8.KEYS[0x5] = True
+                # elif event.unicode == "e": chip8.KEYS[0x6] = True
+                # elif event.unicode == "r": chip8.KEYS[0xD] = True
+                # elif event.unicode == "q": chip8.KEYS[0x7] = True
+                # elif event.unicode == "s": chip8.KEYS[0x8] = True
+                # elif event.unicode == "d": chip8.KEYS[0x9] = True
+                # elif event.unicode == "f": chip8.KEYS[0xE] = True
+                # elif event.unicode == "w": chip8.KEYS[0xA] = True
+                # elif event.unicode == "x": chip8.KEYS[0x0] = True
+                # elif event.unicode == "c": chip8.KEYS[0xB] = True
+                # elif event.unicode == "v": chip8.KEYS[0xF] = True
+                
+                #======================
+                # EN-US
+                #======================                
+                
+                if   event.unicode == "1": chip8.KEYS[0x1] = True
+                elif event.unicode == "2": chip8.KEYS[0x2] = True
+                elif event.unicode == '3': chip8.KEYS[0x3] = True
+                elif event.unicode == "4": chip8.KEYS[0xC] = True
+                elif event.unicode == "q": chip8.KEYS[0x4] = True
+                elif event.unicode == "w": chip8.KEYS[0x5] = True
                 elif event.unicode == "e": chip8.KEYS[0x6] = True
                 elif event.unicode == "r": chip8.KEYS[0xD] = True
-                elif event.unicode == "q": chip8.KEYS[0x7] = True
+                elif event.unicode == "a": chip8.KEYS[0x7] = True
                 elif event.unicode == "s": chip8.KEYS[0x8] = True
                 elif event.unicode == "d": chip8.KEYS[0x9] = True
                 elif event.unicode == "f": chip8.KEYS[0xE] = True
-                elif event.unicode == "w": chip8.KEYS[0xA] = True
+                elif event.unicode == "z": chip8.KEYS[0xA] = True
                 elif event.unicode == "x": chip8.KEYS[0x0] = True
                 elif event.unicode == "c": chip8.KEYS[0xB] = True
-                elif event.unicode == "v": chip8.KEYS[0xF] = True
+                elif event.unicode == "v": chip8.KEYS[0xF] = True                
             elif event.type == pygame.KEYUP:          
                 event.unicode = keymap[event.scancode]
                 # print(event.unicode+" UP")
-                if event.unicode == "&": chip8.KEYS[0x1] = False
-                elif event.unicode == "é": chip8.KEYS[0x2] = False
-                elif event.unicode == '"': chip8.KEYS[0x3] = False
-                elif event.unicode == "'": chip8.KEYS[0xC] = False
-                elif event.unicode == "a": chip8.KEYS[0x4] = False
-                elif event.unicode == "z": chip8.KEYS[0x5] = False
+                
+                #======================
+                # FRENCH
+                #======================                
+                
+                # if   event.unicode == "&": chip8.KEYS[0x1] = False
+                # elif event.unicode == "é": chip8.KEYS[0x2] = False
+                # elif event.unicode == '"': chip8.KEYS[0x3] = False
+                # elif event.unicode == "'": chip8.KEYS[0xC] = False
+                # elif event.unicode == "a": chip8.KEYS[0x4] = False
+                # elif event.unicode == "z": chip8.KEYS[0x5] = False
+                # elif event.unicode == "e": chip8.KEYS[0x6] = False
+                # elif event.unicode == "r": chip8.KEYS[0xD] = False
+                # elif event.unicode == "q": chip8.KEYS[0x7] = False
+                # elif event.unicode == "s": chip8.KEYS[0x8] = False
+                # elif event.unicode == "d": chip8.KEYS[0x9] = False
+                # elif event.unicode == "f": chip8.KEYS[0xE] = False
+                # elif event.unicode == "w": chip8.KEYS[0xA] = False
+                # elif event.unicode == "x": chip8.KEYS[0x0] = False
+                # elif event.unicode == "c": chip8.KEYS[0xB] = False
+                # elif event.unicode == "v": chip8.KEYS[0xF] = False
+
+                #======================
+                # EN-US
+                #====================== 
+                
+                if   event.unicode == "1": chip8.KEYS[0x1] = False
+                elif event.unicode == "2": chip8.KEYS[0x2] = False
+                elif event.unicode == '3': chip8.KEYS[0x3] = False
+                elif event.unicode == "4": chip8.KEYS[0xC] = False
+                elif event.unicode == "q": chip8.KEYS[0x4] = False
+                elif event.unicode == "w": chip8.KEYS[0x5] = False
                 elif event.unicode == "e": chip8.KEYS[0x6] = False
                 elif event.unicode == "r": chip8.KEYS[0xD] = False
-                elif event.unicode == "q": chip8.KEYS[0x7] = False
+                elif event.unicode == "a": chip8.KEYS[0x7] = False
                 elif event.unicode == "s": chip8.KEYS[0x8] = False
                 elif event.unicode == "d": chip8.KEYS[0x9] = False
                 elif event.unicode == "f": chip8.KEYS[0xE] = False
-                elif event.unicode == "w": chip8.KEYS[0xA] = False
+                elif event.unicode == "z": chip8.KEYS[0xA] = False
                 elif event.unicode == "x": chip8.KEYS[0x0] = False
                 elif event.unicode == "c": chip8.KEYS[0xB] = False
-                elif event.unicode == "v": chip8.KEYS[0xF] = False  
-                
+                elif event.unicode == "v": chip8.KEYS[0xF] = False                
         background.fill(BLACK_COLOUR)
         for pixel_row_index, pixel_row in enumerate(chip8.DISPLAY):
             py = pixel_row_index
