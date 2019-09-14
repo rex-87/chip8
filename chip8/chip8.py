@@ -54,9 +54,12 @@ try:
             self.disp_h_px = 32
             
             with open(RomPath, 'rb') as f:
-                RomStr = f.read()
-            self.mem = bytes(0x200*[0x00]) + RomStr        
-            
+                rom_bytes = f.read()
+            self.mem = (
+                bytearray(0x200*[0x00]) +
+                rom_bytes +
+                bytearray((0x1000-len(rom_bytes)-0x200)*[0x00])
+            )
             self.V = {}
             for i in range(16):
                 self.V[i] = 0x00
@@ -134,6 +137,8 @@ try:
             
             w = (self.mem[self.PC] << 8) + self.mem[self.PC+1]
             
+            ### DEBUG
+            ### =====
             # print("${:04X} {:04X}".format(self.PC, w))
             # print(
                 # "V "+
@@ -328,35 +333,31 @@ try:
                 Vy = self.V[y]
                 sprite_byte_list = self.mem[self.I:self.I+n]
                 self.V[0xF] = 0
+                w, h = self.disp_w_px, self.disp_h_px
+                sprite_w = 8
                 
                 # remember current display
                 DISPLAY_OLD = copy.copy(self.DISPLAY)
-                # XOR update
-                for sprite_byte_index, sprite_byte in enumerate(sprite_byte_list):
-                    self.DISPLAY[Vy+sprite_byte_index, Vx:Vx+8] ^= np.where(np.array(list(("{:8b}".format(sprite_byte)))) == '1', True, False)
-                # Wrap around
-                self.DISPLAY[:self.disp_h_px, :self.extra_w] ^= self.DISPLAY[:self.disp_h_px, self.disp_w_px:self.disp_w_px+self.extra_w]
-                # Clear extra display
-                self.DISPLAY[:self.disp_h_px, self.disp_w_px:self.disp_w_px+self.extra_w] = False
-                # determine if any piel was erased
+                # print sprites
+                def print_sprites(sprite_byte_list, Vx, Vy):
+                    for sprite_byte_index, sprite_byte in enumerate(sprite_byte_list):
+                        self.DISPLAY[Vy%h+sprite_byte_index, Vx%w:Vx%w+8] ^= np.where(np.array(list(("{:8b}".format(sprite_byte)))) == '1', True, False)
+                print_sprites(sprite_byte_list, Vx, Vy)
+                # Wrap around if necessary
+                if (h - Vy%h) < n:
+                    mm = n - (h - Vy%h)
+                    wrap_spr_h_list = sprite_byte_list[mm:]
+                    print_sprites(wrap_spr_h_list, Vx, 0)
+                if (w - Vx%w) < sprite_w:
+                    ii = w - Vx%w
+                    wrap_spr_w_list = [( (sb << ii) & 0xFF ) for sb in sprite_byte_list]
+                    print_sprites(wrap_spr_w_list, 0, Vy)
+                # Determine if any pixel was erased
                 if (DISPLAY_OLD[:self.disp_h_px, :self.disp_w_px] & ~self.DISPLAY[:self.disp_h_px, :self.disp_w_px]).flatten().any():
                     self.V[0xF] = 1
-                    
-                # for sprite_byte_index, sprite_byte in enumerate(sprite_byte_list):
-                    # # TODO: handle case where sprite is positioned so part of it is outside the coordinates of the display
-                    # old_display_byte = (self.DISPLAY[Vy+sprite_byte_index] >> (self.disp_w_px - 8 - Vx) ) & 0xFF
-                    # self.DISPLAY[Vy+sprite_byte_index] ^= ( sprite_byte << (self.disp_w_px - 8 - Vx) )
-                    # new_display_byte = (self.DISPLAY[Vy+sprite_byte_index] >> (self.disp_w_px - 8 - Vx) ) & 0xFF
-                    # if self.V[0xF] == 0:
-                        # for bit_position in range(8):
-                            # if (
-                                    # ( ( (old_display_byte >> bit_position) & 0x1 ) == 1 )
-                                # and ( ( (new_display_byte >> bit_position) & 0x1 ) == 0 )
-                            # ):
-                                # self.V[0xF] = 1
-                                # break
                 
-                # Debug DISPLAY
+                ### Debug DISPLAY
+                ### =============
                 # print()
                 # for row in self.DISPLAY[:self.disp_h_px, :self.disp_w_px]:
                     # # import pdb; pdb.set_trace()
@@ -426,6 +427,19 @@ try:
                 The values of I and Vx are added, and the results are stored in I.
                 """
                 self.I += self.V[x]
+            elif ( n3 == 0xF ) and ( kk == 0x33 ):
+                """
+                Fx33 - LD B, Vx
+                Store BCD representation of Vx in memory locations I, I+1, and I+2.
+
+                The interpreter takes the decimal value of Vx,
+                and places the hundreds digit in memory at location in I,
+                the tens digit at location I+1,
+                and the ones digit at location I+2.
+                """
+                self.mem[self.I  ] = self.V[x]//100
+                self.mem[self.I+1] = self.V[x]//10
+                self.mem[self.I+2] = self.V[x]%10
             elif ( n3 == 0xF ) and ( kk == 0x65 ):
                 """
                 Fx65 - LD Vx, [I]
@@ -436,6 +450,20 @@ try:
                 for loc in range(x+1):
                     self.V[loc] = self.mem[self.I + loc]
             else:
+                ### DEBUG
+                ### =====
+                print("${:04X} {:04X}".format(self.PC, w))
+                print(
+                    "V "+
+                    " ".join(["{:02X}".format(val) for key, val in self.V.items()])+
+                    "  I {:04X}".format(self.I)+
+                    "  DT {:02X}".format(self.DT)
+                )
+                print(        
+                    "S "+
+                    " ".join(["{:04X}".format(add) for add in self.STACK])+
+                    "  SP {:02X}".format(self.SP)
+                )
                 import pdb; pdb.set_trace() 
             self.PC += 2
 
