@@ -40,6 +40,8 @@ try:
     import threading
     import queue
     import random
+    import numpy as np
+    import copy
 
     pygame.mixer.init(buffer = 256)
     beep = pygame.mixer.Sound(file = r'sounds\200.wav')
@@ -48,8 +50,8 @@ try:
 
         def __init__(self, RomPath = None):
             
-            self.display_width_pixel = 72
-            self.display_height_pixel = 40
+            self.disp_w_px = 64
+            self.disp_h_px = 32
             
             with open(RomPath, 'rb') as f:
                 RomStr = f.read()
@@ -65,7 +67,9 @@ try:
                 
             self.STACK = 16*[0x0000]
             
-            self.DISPLAY = self.display_height_pixel*[0x0000000000000000]
+            self.extra_w = 16
+            self.extra_h = 16
+            self.DISPLAY = np.array([[False]*(self.disp_w_px+self.extra_w)]*(self.disp_h_px+self.extra_h))
                 
             self.I = 0x00    
 
@@ -86,7 +90,7 @@ try:
         
         def runEmulationThread(self):
         
-            ClockFrequency = 110000
+            ClockFrequency = 100000
             TimeElapsed = 0
             startTime = 0
             while True:
@@ -130,18 +134,18 @@ try:
             
             w = (self.mem[self.PC] << 8) + self.mem[self.PC+1]
             
-            print("${:04X} {:04X}".format(self.PC, w))
-            print(
-                "V "+
-                " ".join(["{:02X}".format(val) for key, val in self.V.items()])+
-                "  I {:04X}".format(self.I)+
-                "  DT {:02X}".format(self.DT)
-            )
-            print(        
-                "S "+
-                " ".join(["{:04X}".format(add) for add in self.STACK])+
-                "  SP {:02X}".format(self.SP)
-            )
+            # print("${:04X} {:04X}".format(self.PC, w))
+            # print(
+                # "V "+
+                # " ".join(["{:02X}".format(val) for key, val in self.V.items()])+
+                # "  I {:04X}".format(self.I)+
+                # "  DT {:02X}".format(self.DT)
+            # )
+            # print(        
+                # "S "+
+                # " ".join(["{:04X}".format(add) for add in self.STACK])+
+                # "  SP {:02X}".format(self.SP)
+            # )
             
             n3 = (w & 0xF000) >> 12
             x = (w & 0x0F00) >> 8
@@ -155,7 +159,7 @@ try:
                 00E0 - CLS
                 Clear the display.
                 """
-                self.DISPLAY = self.display_height_pixel*[0x0000000000000000]
+                self.DISPLAY = np.array([[False]*(self.disp_w_px+self.extra_w)]*(self.disp_h_px+self.extra_h))
             elif ( n3 == 0x0 ) and (nnn != 0x0EE):
                 """
                 0nnn - SYS addr
@@ -324,23 +328,39 @@ try:
                 Vy = self.V[y]
                 sprite_byte_list = self.mem[self.I:self.I+n]
                 self.V[0xF] = 0
+                
+                # remember current display
+                DISPLAY_OLD = copy.copy(self.DISPLAY)
+                # XOR update
                 for sprite_byte_index, sprite_byte in enumerate(sprite_byte_list):
-                    # TODO: handle case where sprite is positioned so part of it is outside the coordinates of the display
-                    old_display_byte = (self.DISPLAY[Vy+sprite_byte_index] >> (self.display_width_pixel - 8 - Vx) ) & 0xFF
-                    self.DISPLAY[Vy+sprite_byte_index] ^= ( sprite_byte << (self.display_width_pixel - 8 - Vx) )
-                    new_display_byte = (self.DISPLAY[Vy+sprite_byte_index] >> (self.display_width_pixel - 8 - Vx) ) & 0xFF
-                    if self.V[0xF] == 0:
-                        for bit_position in range(8):
-                            if (
-                                    ( ( (old_display_byte >> bit_position) & 0x1 ) == 1 )
-                                and ( ( (new_display_byte >> bit_position) & 0x1 ) == 0 )
-                            ):
-                                self.V[0xF] = 1
-                                break
+                    self.DISPLAY[Vy+sprite_byte_index, Vx:Vx+8] ^= np.where(np.array(list(("{:8b}".format(sprite_byte)))) == '1', True, False)
+                # Wrap around
+                self.DISPLAY[:self.disp_h_px, :self.extra_w] ^= self.DISPLAY[:self.disp_h_px, self.disp_w_px:self.disp_w_px+self.extra_w]
+                # Clear extra display
+                self.DISPLAY[:self.disp_h_px, self.disp_w_px:self.disp_w_px+self.extra_w] = False
+                # determine if any piel was erased
+                if (DISPLAY_OLD[:self.disp_h_px, :self.disp_w_px] & ~self.DISPLAY[:self.disp_h_px, :self.disp_w_px]).flatten().any():
+                    self.V[0xF] = 1
+                    
+                # for sprite_byte_index, sprite_byte in enumerate(sprite_byte_list):
+                    # # TODO: handle case where sprite is positioned so part of it is outside the coordinates of the display
+                    # old_display_byte = (self.DISPLAY[Vy+sprite_byte_index] >> (self.disp_w_px - 8 - Vx) ) & 0xFF
+                    # self.DISPLAY[Vy+sprite_byte_index] ^= ( sprite_byte << (self.disp_w_px - 8 - Vx) )
+                    # new_display_byte = (self.DISPLAY[Vy+sprite_byte_index] >> (self.disp_w_px - 8 - Vx) ) & 0xFF
+                    # if self.V[0xF] == 0:
+                        # for bit_position in range(8):
+                            # if (
+                                    # ( ( (old_display_byte >> bit_position) & 0x1 ) == 1 )
+                                # and ( ( (new_display_byte >> bit_position) & 0x1 ) == 0 )
+                            # ):
+                                # self.V[0xF] = 1
+                                # break
                 
                 # Debug DISPLAY
-                # for row in self.DISPLAY:
-                    # print("{:064b}".format(row))
+                # print()
+                # for row in self.DISPLAY[:self.disp_h_px, :self.disp_w_px]:
+                    # # import pdb; pdb.set_trace()
+                    # print("".join(row.astype(int).astype(str)))
                 # time.sleep(0.04)
                 
             elif ( n3 == 0xE ) and ( kk == 0x9E ):
@@ -454,14 +474,15 @@ try:
             self.joinAllThreads()
             
     ThisFolder = os.path.dirname(os.path.realpath(__file__))
+    # RomPath = os.path.join(ThisFolder, r"roms\INVADERS")
     RomPath = os.path.join(ThisFolder, r"roms\WIPEOFF")
 
     chip8 = Chip8(RomPath = RomPath)
 
     zoom = 12
 
-    screen_width = chip8.display_width_pixel*zoom
-    screen_height = chip8.display_height_pixel*zoom
+    screen_width = chip8.disp_w_px*zoom
+    screen_height = chip8.disp_h_px*zoom
 
     BLACK_COLOUR = (0, 0, 0)
     WHITE_COLOUR = (255, 255, 255)
@@ -471,7 +492,7 @@ try:
     background = pygame.Surface(screen.get_size())
     background = background.convert()
     clock = pygame.time.Clock()
-    FPS = 60
+    FPS = 20
     bPlaying = True
 
     keymap = {}
@@ -581,10 +602,9 @@ try:
                 elif event.unicode == "c": chip8.KEYS[0xB] = False
                 elif event.unicode == "v": chip8.KEYS[0xF] = False                
         background.fill(BLACK_COLOUR)
-        for pixel_row_index, pixel_row in enumerate(chip8.DISPLAY):
-            py = pixel_row_index
-            for px in range(chip8.display_width_pixel): 
-                if ( ( pixel_row >> (chip8.display_width_pixel - px - 1) ) & 0x1 ) == 1:
+        for py, pixel_row in enumerate(chip8.DISPLAY[:chip8.disp_h_px, :chip8.disp_w_px]):
+            for px, pixel_state in enumerate(pixel_row):
+                if pixel_state:
                     pygame.draw.rect(
                         background,
                         WHITE_COLOUR,
